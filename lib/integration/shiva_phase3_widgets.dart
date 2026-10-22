@@ -52,7 +52,7 @@ class ShivaStatusIndicator extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: _color(),
                 boxShadow: [
-                  BoxShadow(color: _color().withOpacity(0.7), blurRadius: 12, spreadRadius: 2),
+                  BoxShadow(color: _color().withValues(alpha: 0.7), blurRadius: 12, spreadRadius: 2),
                 ],
               ),
             ),
@@ -87,7 +87,7 @@ class ShivaLanguageSelector extends StatelessWidget {
           decoration: BoxDecoration(
             color: ShivaPhase3Palette.panel,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: ShivaPhase3Palette.accent2.withOpacity(0.4)),
+            border: Border.all(color: ShivaPhase3Palette.accent2.withValues(alpha: 0.4)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
@@ -146,11 +146,11 @@ class ShivaVoiceOrb extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(colors: [
-                    color.withOpacity(0.28),
-                    color.withOpacity(0.05),
+                    color.withValues(alpha: 0.28),
+                    color.withValues(alpha: 0.05),
                   ]),
                   boxShadow: [
-                    BoxShadow(color: color.withOpacity(0.5), blurRadius: active ? 26 : 12, spreadRadius: active ? 4 : 1),
+                    BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: active ? 26 : 12, spreadRadius: active ? 4 : 1),
                   ],
                 ),
               ),
@@ -226,7 +226,7 @@ class ShivaTranscriptCard extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: color.withOpacity(0.8),
+            color: color.withValues(alpha: 0.8),
             fontSize: 11,
             letterSpacing: 2,
             fontWeight: FontWeight.w700,
@@ -239,9 +239,9 @@ class ShivaTranscriptCard extends StatelessWidget {
   }
 
   BoxDecoration _panelDecoration() => BoxDecoration(
-        color: ShivaPhase3Palette.panel.withOpacity(0.85),
+        color: ShivaPhase3Palette.panel.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: ShivaPhase3Palette.accent2.withOpacity(0.35)),
+        border: Border.all(color: ShivaPhase3Palette.accent2.withValues(alpha: 0.35)),
       );
 }
 
@@ -305,7 +305,7 @@ class ShivaQuickActionsRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: ShivaPhase3Palette.panel,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.5)),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

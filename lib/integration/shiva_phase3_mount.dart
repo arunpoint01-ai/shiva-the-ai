@@ -2,6 +2,9 @@
 import 'package:flutter/material.dart';
 import 'shiva_phase3_controller.dart';
 import 'shiva_phase3_widgets.dart';
+import '../services/gemini_service.dart';
+import '../services/speech_service.dart';
+import '../services/tts_service.dart';
 
 class ShivaPhase3Mount {
   ShivaPhase3Mount._();
