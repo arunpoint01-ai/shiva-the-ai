@@ -23,14 +23,15 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Format and analyze (informational)
+      - name: Prepare Android project
+        run: bash tools/prepare_android.sh
+
+      - name: Analyze (informational)
         continue-on-error: true
-        run: |
-          dart format lib/main.dart lib/voice_engine.dart
-          flutter analyze
+        run: flutter analyze
 
       - name: Build release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
 
       - uses: actions/upload-artifact@v4
         with:
