@@ -6,7 +6,7 @@ rm -rf android
 flutter create --platforms=android --org com.shiva --project-name shiva_ai --no-pub .
 rm -rf test
 
-GR=$(ls android/app/build.gradle.kts android/app/build.gradle 2>/dev/null | head -1)
+GR=android/app/build.gradle.kts; [ -f "$GR" ] || GR=android/app/build.gradle
 sed -i 's/com\.shiva\.shiva_ai/com.shiva.ai/g' "$GR"
 sed -i -E 's/minSdk(Version)? *= *flutter\.minSdkVersion/minSdk = 24/; s/minSdkVersion +flutter\.minSdkVersion/minSdkVersion 24/' "$GR"
 grep -n "minSdk\|applicationId\|namespace" "$GR"
