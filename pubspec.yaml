@@ -17,7 +17,6 @@ dependencies:
   gemini_live: ^2026.10.5
   flutter_soloud: ^5.1.5
   local_auth: ^2.3.0
-  record: ^5.2.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
