@@ -1,5 +1,5 @@
 // SHIVA_PHASE5_ROUTER (W1: Unicode-safe word matching for Devanagari)
-enum ShivaIntent { playMedia, spiritualQuestion, stop, cancel, changeLanguage, downloadMedia, audioTest, unknown }
+enum ShivaIntent { playMedia, spiritualQuestion, stop, cancel, changeLanguage, downloadMedia, audioTest, liveStart, unknown }
 
 class ShivaIntentResult {
   final ShivaIntent intent;
@@ -30,6 +30,10 @@ class ShivaIntentRouter {
   static final RegExp _stop = _exact('stop|band|थांब|बंद|रुक|रुको');
   static final RegExp _cancel = _exact('cancel|रद्द');
   static final RegExp _audioTest = _prefix('mic test|audio test|sound test|माईक टेस्ट|माइक टेस्ट|मायक्रोफोन टेस्ट|ऑडिओ टेस्ट|ऑडियो टेस्ट|आवाज टेस्ट');
+  static final List<RegExp> _live = [
+    _prefix('live mode|go live|start live|live conversation'),
+    _prefix('लाइव|लाईव'),
+  ];
   static final RegExp _download = _prefix('download|डाउनलोड|डाऊनलोड');
   static final List<RegExp> _spiritual = [
     _prefix('gita|गीता|गीते|bhagavad|karmayoga|कर्मयोग|karma|श्लोक|verse|meaning'),
@@ -60,6 +64,11 @@ class ShivaIntentRouter {
     // Microphone / speaker self-test.
     if (_audioTest.hasMatch(lower)) {
       return ShivaIntentResult(intent: ShivaIntent.audioTest, originalText: raw);
+    }
+
+    // Live voice-to-voice conversation.
+    if (_any(_live, lower)) {
+      return ShivaIntentResult(intent: ShivaIntent.liveStart, originalText: raw);
     }
 
     // Boss secure download.

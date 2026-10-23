@@ -7,7 +7,10 @@
 //  * interrupt() / finishCommand() flush temporary state (zero-bloat rule)
 //  * sensitive actions go through the boss auth gate (deny-by-default)
 
+import 'dart:async';
 import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show ValueNotifier;
 
 import '../config/ai_config.dart';
 import '../integration/shiva_boss_auth_gate.dart';
@@ -16,6 +19,7 @@ import '../integration/shiva_memory_flush_manager.dart';
 import '../services/audio_input.dart';
 import '../services/audio_output.dart';
 import '../services/gemini_service.dart';
+import '../services/live_session.dart';
 import '../voice_engine.dart' show VoiceLanguage;
 
 class ShivaReply {
@@ -36,6 +40,14 @@ class ShivaCore {
   GeminiService? _gemini;
   AudioInput? _input;
   AudioOutput? _output;
+
+  // ---- Live (voice-to-voice) state ----
+  /// True while a Gemini Live conversation owns the microphone.
+  final ValueNotifier<bool> liveActive = ValueNotifier<bool>(false);
+  ShivaLiveSession? _live;
+  StreamSubscription<Uint8List>? _micSub;
+  bool _outOpen = false;
+  Future<void> _audioChain = Future<void>.value();
   final ShivaBossAuthGate _auth;
   final ShivaMemoryFlushManager _flush;
 
@@ -71,6 +83,9 @@ class ShivaCore {
 
       case ShivaIntent.audioTest:
         return _audioTest(sid, lang, result.intent);
+
+      case ShivaIntent.liveStart:
+        return _startLive(lang, result.intent);
 
       case ShivaIntent.spiritualQuestion:
       case ShivaIntent.unknown:
@@ -148,8 +163,82 @@ class ShivaCore {
     }
   }
 
+  // ------------------------------------------------------------------
+  // Live conversation (W3)
+  // ------------------------------------------------------------------
+
+  /// All speaker operations run one after another so chunks never race
+  /// with stream start/stop.
+  void _enqueue(Future<void> Function() job) {
+    _audioChain = _audioChain.then((_) => job()).catchError((_) {});
+  }
+
+  Future<ShivaReply?> _startLive(VoiceLanguage lang, ShivaIntent intent) async {
+    if (!AiConfig.hasApiKey) return ShivaReply(_t(lang, 'ai_unavailable'), intent);
+    if (liveActive.value) return null;
+
+    final input = _input ??= AudioInput();
+    final output = _output ??= AudioOutput();
+    try {
+      if (!await input.hasPermission()) return ShivaReply(_t(lang, 'mic_denied'), intent);
+
+      _outOpen = false;
+      final live = ShivaLiveSession(
+        onAudio: (pcm) => _enqueue(() async {
+          if (!_outOpen) {
+            await output.start(sampleRate: 24000);
+            _outOpen = true;
+          }
+          await output.push(pcm);
+        }),
+        onInterrupted: () => _enqueue(() async {
+          _outOpen = false;
+          await output.interrupt();
+        }),
+        onTurnComplete: () => _enqueue(() async {
+          if (_outOpen) {
+            output.finish();
+            _outOpen = false;
+          }
+        }),
+        onClosed: () {
+          stopLive();
+        },
+      );
+      _live = live;
+      await live.connect();
+
+      final stream = await input.start();
+      _micSub = stream.listen(live.sendAudio);
+      liveActive.value = true;
+
+      live.sendText('Greet the boss in one short Marathi sentence, for example: हाय बॉस, काय करू?');
+      return null; // Shiva speaks through the Live session itself.
+    } catch (_) {
+      await stopLive();
+      return ShivaReply(_t(lang, 'live_failed'), intent);
+    }
+  }
+
+  /// Ends the live conversation and releases the microphone and speaker.
+  Future<void> stopLive() async {
+    if (_live == null && !liveActive.value) return;
+    final live = _live;
+    _live = null;
+    liveActive.value = false;
+    await _micSub?.cancel();
+    _micSub = null;
+    await _input?.stop();
+    live?.close();
+    _enqueue(() async {
+      _outOpen = false;
+      await _output?.interrupt();
+    });
+  }
+
   /// User stopped Shiva or left the app: drop in-flight work and clear temp state.
   Future<void> interrupt() async {
+    await stopLive();
     await _flush.flush();
     await _output?.interrupt();
     await _input?.stop();
@@ -159,6 +248,8 @@ class ShivaCore {
   Future<void> finishCommand() => _flush.flush(incrementSession: false);
 
   void dispose() {
+    stopLive();
+    liveActive.dispose();
     _flush.dispose();
     _gemini?.dispose();
     _input?.dispose();
@@ -193,6 +284,7 @@ class ShivaCore {
 
   static const Map<VoiceLanguage, Map<String, String>> _strings = {
     VoiceLanguage.marathi: {
+      'live_failed': 'लाइव्ह संवाद सुरू होऊ शकला नाही.',
       'mic_denied': 'मायक्रोफोन परवानगी नाही. Android सेटिंग्जमध्ये ती सुरू करा.',
       'audio_test_done': 'ऑडिओ टेस्ट पूर्ण. आवाजाची पातळी {p} टक्के.',
       'audio_test_silent': 'काही आवाज मिळाला नाही. मायक्रोफोन तपासा.',
@@ -206,6 +298,7 @@ class ShivaCore {
       'ai_error': 'AI शी संपर्क होऊ शकला नाही. थोड्या वेळाने पुन्हा प्रयत्न करा.',
     },
     VoiceLanguage.hindi: {
+      'live_failed': 'लाइव बातचीत शुरू नहीं हो सकी।',
       'mic_denied': 'माइक्रोफोन की अनुमति नहीं है। Android सेटिंग्स में उसे चालू करें।',
       'audio_test_done': 'ऑडियो टेस्ट पूरा हुआ। आवाज़ का स्तर {p} प्रतिशत।',
       'audio_test_silent': 'कोई आवाज़ नहीं मिली। माइक्रोफोन जाँचें।',
@@ -219,6 +312,7 @@ class ShivaCore {
       'ai_error': 'AI से संपर्क नहीं हो सका। थोड़ी देर बाद फिर कोशिश करें।',
     },
     VoiceLanguage.english: {
+      'live_failed': 'I could not start the live conversation.',
       'mic_denied': 'Microphone permission is not granted. Enable it in Android settings.',
       'audio_test_done': 'Audio test done. Voice level {p} percent.',
       'audio_test_silent': 'I did not pick up any sound. Check the microphone.',

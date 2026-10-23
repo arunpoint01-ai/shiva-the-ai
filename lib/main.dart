@@ -208,7 +208,10 @@ class _HomePageState extends State<HomePage>
       onSoundLevel: (l) => _level.value = ((l + 2) / 12).clamp(0.0, 1.0),
     )..language = _lang;
     _engine.initialize();
+    _core.liveActive.addListener(_onLiveChanged);
   }
+
+  void _onLiveChanged() => _update(() {});
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -225,6 +228,7 @@ class _HomePageState extends State<HomePage>
     _spin.dispose();
     _pulse.dispose();
     _level.dispose();
+    _core.liveActive.removeListener(_onLiveChanged);
     _core.dispose();
     _engine.dispose();
     super.dispose();
@@ -244,6 +248,10 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _onRingTap() async {
+    if (_core.liveActive.value) {
+      await _core.stopLive();
+      return;
+    }
     switch (_vs) {
       case VoiceState.idle:
       case VoiceState.error:
@@ -307,6 +315,7 @@ class _HomePageState extends State<HomePage>
   }
 
   String get _statusLabel {
+    if (_core.liveActive.value) return 'LIVE';
     switch (_vs) {
       case VoiceState.idle:
         return _t('ready');
