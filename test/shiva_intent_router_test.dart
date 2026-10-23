@@ -41,6 +41,12 @@ void main() {
     expect(r('hey shiva'), ShivaIntent.unknown);
   });
 
+  test('audio self-test', () {
+    expect(r('mic test'), ShivaIntent.audioTest);
+    expect(r('माईक टेस्ट'), ShivaIntent.audioTest);
+    expect(r('ऑडिओ टेस्ट कर'), ShivaIntent.audioTest);
+  });
+
   test('wake word', () {
     expect(ShivaIntentRouter.containsWakeWord('Hey Shiva play aarti'), isTrue);
     expect(ShivaIntentRouter.containsWakeWord('हे शिवा आरती लाव'), isTrue);
