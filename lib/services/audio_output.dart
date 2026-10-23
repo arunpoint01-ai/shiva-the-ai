@@ -34,7 +34,7 @@ class AudioOutput {
     final src = _source;
     if (src == null || pcm.isEmpty) return;
     SoLoud.instance.addAudioDataStream(src, pcm);
-    _handle ??= await SoLoud.instance.play(src);
+    _handle ??= SoLoud.instance.play(src);
   }
 
   /// No more chunks will come; the stream ends after the buffered audio plays.
