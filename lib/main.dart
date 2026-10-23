@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'core/shiva_core.dart';
 import 'voice_engine.dart';
 
 void main() => runApp(const ShivaApp());
@@ -182,6 +183,7 @@ class _HomePageState extends State<HomePage>
   final ValueNotifier<double> _level = ValueNotifier<double>(0);
 
   late final VoiceEngine _engine;
+  final ShivaCore _core = ShivaCore();
   VoiceLanguage _lang = VoiceLanguage.english;
   VoiceState _vs = VoiceState.idle;
   VoiceError? _error;
@@ -198,6 +200,7 @@ class _HomePageState extends State<HomePage>
     _engine = VoiceEngine(
       onStateChanged: (s) {
         if (s != VoiceState.listening) _level.value = 0;
+        if (_vs == VoiceState.speaking && s == VoiceState.idle) _core.finishCommand();
         _update(() => _vs = s);
       },
       onTranscript: _onTranscript,
@@ -212,6 +215,7 @@ class _HomePageState extends State<HomePage>
     if (state != AppLifecycleState.resumed) {
       _engine.cancelListening();
       _engine.stopSpeaking();
+      _core.interrupt();
     }
   }
 
@@ -221,6 +225,7 @@ class _HomePageState extends State<HomePage>
     _spin.dispose();
     _pulse.dispose();
     _level.dispose();
+    _core.dispose();
     _engine.dispose();
     super.dispose();
   }
@@ -246,6 +251,7 @@ class _HomePageState extends State<HomePage>
       case VoiceState.listening:
         await _engine.stopListening();
       case VoiceState.speaking:
+        _core.interrupt();
         await _engine.stopSpeaking();
       case VoiceState.processing:
         break;
@@ -257,7 +263,15 @@ class _HomePageState extends State<HomePage>
       _heard = text;
       _heardFinal = isFinal;
     });
-    if (isFinal && text.trim().isNotEmpty) _say(_respond(text));
+    if (isFinal && text.trim().isNotEmpty) _handleFinal(text);
+  }
+
+  Future<void> _handleFinal(String text) async {
+    final reply = await _core.handle(text, _lang, quickReply: _quickReply);
+    if (reply == null || !mounted) return;
+    if (reply.stopAudio) await _engine.stopSpeaking();
+    if (reply.switchTo != null) await _setLanguage(reply.switchTo!);
+    _say(reply.text);
   }
 
   void _say(String text) {
@@ -282,14 +296,14 @@ class _HomePageState extends State<HomePage>
     return _setLanguage(all[(_lang.index + 1) % all.length]);
   }
 
-  String _respond(String raw) {
+  String? _quickReply(String raw) {
     final text = raw.toLowerCase();
     final tokens = text.split(RegExp(r'[\s,.!?।]+')).toSet();
     bool has(List<String> phrases) => phrases.any((p) => text.contains(p));
     if (has(_namePhrases)) return _t('name');
     if (has(_confirmPhrases)) return _t('confirm');
     if (tokens.any(_greetWords.contains)) return _t('greeting');
-    return _t('unknown');
+    return null;
   }
 
   String get _statusLabel {

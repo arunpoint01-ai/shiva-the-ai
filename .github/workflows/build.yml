@@ -30,6 +30,10 @@ jobs:
         continue-on-error: true
         run: flutter analyze
 
+      - name: Unit tests (informational)
+        continue-on-error: true
+        run: flutter test
+
       - name: Build release APK
         run: flutter build apk --release --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
 
