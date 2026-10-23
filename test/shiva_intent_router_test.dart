@@ -43,6 +43,7 @@ void main() {
 
   test('audio self-test', () {
     expect(r('mic test'), ShivaIntent.audioTest);
+    expect(r('mike test'), ShivaIntent.audioTest);
     expect(r('माईक टेस्ट'), ShivaIntent.audioTest);
     expect(r('ऑडिओ टेस्ट कर'), ShivaIntent.audioTest);
   });

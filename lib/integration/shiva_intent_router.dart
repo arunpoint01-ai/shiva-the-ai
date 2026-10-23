@@ -29,7 +29,7 @@ class ShivaIntentRouter {
 
   static final RegExp _stop = _exact('stop|band|थांब|बंद|रुक|रुको');
   static final RegExp _cancel = _exact('cancel|रद्द');
-  static final RegExp _audioTest = _prefix('mic test|audio test|sound test|माईक टेस्ट|माइक टेस्ट|मायक्रोफोन टेस्ट|ऑडिओ टेस्ट|ऑडियो टेस्ट|आवाज टेस्ट');
+  static final RegExp _audioTest = _prefix('mic test|mike test|mic check|mike check|microphone test|audio test|sound test|माईक टेस्ट|माइक टेस्ट|मायक्रोफोन टेस्ट|ऑडिओ टेस्ट|ऑडियो टेस्ट|आवाज टेस्ट');
   static final List<RegExp> _live = [
     _prefix('live mode|go live|start live|live conversation'),
     _prefix('लाइव|लाईव'),

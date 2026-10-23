@@ -32,6 +32,9 @@ class ShivaReply {
 }
 
 class ShivaCore {
+  /// Shown inside diagnostic messages so we always know which build is running.
+  static const String build = 'W3.1';
+
   ShivaCore({GeminiService? gemini, ShivaBossAuthGate? auth, ShivaMemoryFlushManager? flush})
       : _gemini = gemini,
         _auth = auth ?? ShivaBossAuthGate(),
@@ -108,9 +111,9 @@ class ShivaCore {
       final answer = await _ai.generateResponse(prompt);
       if (_flush.isStale(sid)) return null;
       return ShivaReply(answer, intent);
-    } catch (_) {
+    } catch (e) {
       if (_flush.isStale(sid)) return null;
-      return ShivaReply(_t(lang, 'ai_error'), intent);
+      return ShivaReply('${_t(lang, 'ai_error')} [${_diag(e)}]', intent);
     }
   }
 
@@ -214,9 +217,9 @@ class ShivaCore {
 
       live.sendText('Greet the boss in one short Marathi sentence, for example: हाय बॉस, काय करू?');
       return null; // Shiva speaks through the Live session itself.
-    } catch (_) {
+    } catch (e) {
       await stopLive();
-      return ShivaReply(_t(lang, 'live_failed'), intent);
+      return ShivaReply('${_t(lang, 'live_failed')} [${_diag(e)}]', intent);
     }
   }
 
@@ -254,6 +257,16 @@ class ShivaCore {
     _gemini?.dispose();
     _input?.dispose();
     _output?.dispose();
+  }
+
+  /// Short, secret-free description of an error (the API key is always masked).
+  static String _diag(Object e) {
+    var s = e is GeminiException ? 'HTTP ${e.statusCode ?? '-'} ${e.userMessage}' : e.toString();
+    final key = AiConfig.geminiApiKey;
+    if (key.isNotEmpty) s = s.replaceAll(key, '***');
+    s = s.replaceAll(RegExp(r'key=[^&\s]+'), 'key=***');
+    if (s.length > 140) s = s.substring(0, 140);
+    return '$build: $s';
   }
 
   static VoiceLanguage? _langFor(String? code) {
